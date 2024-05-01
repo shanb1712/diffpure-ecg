@@ -3,6 +3,8 @@ import _pickle as pickle
 import pathlib
 import h5py
 import pandas as pd
+
+
 # from Data_Preparation import Prepare_NSTDB
 
 
@@ -15,6 +17,7 @@ def get_data(y, traces_ids):
     df_diagnosis = y.reindex(columns=[d for d in diagnosis])
     y = df_diagnosis.values
     return y
+
 
 def Load_Data(path_to_hdf5, path_to_csv, portion=None):
     # Get tracings
@@ -35,7 +38,7 @@ def Load_Data(path_to_hdf5, path_to_csv, portion=None):
     return x, y, idx_train, idx_val
 
 
-def Load_Noise(noise_test_len=0, noise_version=1):
+def Load_Noise(noise_test_len=0, noise_version=1, path_to_save=None):
     path_to_data = pathlib.PurePath('./data/')
     print('Getting the Data ready ... ')
 
@@ -74,10 +77,10 @@ def Load_Noise(noise_test_len=0, noise_version=1):
         noise_train = bw_noise_channel2_a
     else:
         raise Exception("Sorry, noise_version should be 1 or 2")
-    if noise_test_len> 0:
+    if noise_test_len > 0:
         rnd_test = np.random.randint(low=20, high=200, size=noise_test_len) / 100
         # Saving the random array so we can use it on the amplitude segmentation tables
-        np.save('rnd_test.npy', rnd_test)
+        np.save(path_to_save / 'rnd_test.npy', rnd_test)
         print('rnd_test shape: ' + str(rnd_test.shape))
 
     return noise_train, noise_test

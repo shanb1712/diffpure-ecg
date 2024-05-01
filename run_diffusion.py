@@ -77,7 +77,7 @@ if __name__ == "__main__":
         params = {'batch_size': 50,
                   'num_workers': 0,
                   'shuffle': False}
-        _, noise_test = Load_Noise(noise_test_len=len(x), noise_version=args.n_type)
+        _, noise_test = Load_Noise(noise_test_len=len(x), noise_version=args.n_type, path_to_save=foldername)
         test_set = Diffusion_Dataset(x, noise_test, list(range(len(x))), test=True)
         test_generator = DataLoader(test_set, **params)
 
