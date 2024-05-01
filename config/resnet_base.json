@@ -1,0 +1,32 @@
+{
+	"config": "resnet_base.json",
+	"device": "cuda:0",
+	"path_to_database": "/MLAIM/databases/tnmg/",
+	"train": true,
+	"epochs": 70,
+	"seed": 2,
+	"sample_freq": 400,
+	"seq_length": 4096,
+	"scale_multiplier": 10,
+	"batch_size": 64,
+	"lr": 0.001,
+	"patience": 12,
+	"min_lr": 1e-07,
+	"lr_factor": 0.1,
+	"net_filter_size": [
+		64,
+		128,
+		196,
+		256,
+		320
+	],
+	"net_seq_lengh": [
+		4096,
+		1024,
+		256,
+		64,
+		16
+	],
+	"dropout_rate": 0.8,
+	"kernel_size": 17
+}

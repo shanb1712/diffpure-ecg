@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="b638e0af-0c9c-4043-aec2-4ebecbf6428e" name="diffpure-ecg">
+        <fileTransfer rootFolder="/home/shanybiton" accessType="SFTP" host="orion02" port="22" sshConfigId="7d4ab4a7-1a0e-4426-b21c-5f1d95c6afb6" sshConfig="shanybiton@bm@orion02:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

@@ -1,0 +1,18 @@
+
+#type: args
+
+train:
+  epochs: 70
+  batch_size: 64
+  lr: 0.001
+  patience: 12
+  min_lr: 1.0e-7
+  lr_factor: 0.1
+  
+resnet:
+  seq_length: 4096
+  net_filter_size: [64, 128, 196, 256, 320]
+  net_seq_length: [4096, 1024, 256, 64, 16]
+  dropout_rate: 0.8
+  kernel_size: 17
+  scale_multiplier: 10
