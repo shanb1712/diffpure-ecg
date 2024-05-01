@@ -1,0 +1,30 @@
+batch_size: 64
+config: resnet_base.yaml
+device: cuda:0
+dropout_rate: 0.8
+epochs: 70
+folder: /home/shanybiton/repos/diffpure-ecg/ecg-age-prediction/model/
+kernel_size: 17
+lr: 0.001
+lr_factor: 0.1
+min_lr: 1.0e-07
+net_filter_size:
+- 64
+- 128
+- 196
+- 256
+- 320
+net_seq_lengh:
+- 4096
+- 1024
+- 256
+- 64
+- 16
+path_to_csv: /MLAIM/databases/tnmg/ecg-traces/ecg-traces/annotations.csv
+path_to_hdf5: /MLAIM/databases/tnmg/ecg-traces/ecg-traces/preprocessed/traces.hdf5
+patience: 12
+sample_freq: 400
+scale_multiplier: 10
+seed: 2
+seq_length: 4096
+val_split: 0.02
