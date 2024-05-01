@@ -100,8 +100,8 @@ def report_performance(output_file, path_to_annotators, y_pred):
     scores_all_df = scores_all_df.reindex(level=0, columns=score_fun.keys())
 
     # Save results
-    scores_all_df.to_excel(f"{output_file}.xlsx", float_format='%.3f')
-    scores_all_df.to_csv(f"{output_file}.csv", float_format='%.3f')
+    scores_all_df.to_excel(f"{str(output_file)}.xlsx", float_format='%.3f')
+    scores_all_df.to_csv(f"{str(output_file)}.csv", float_format='%.3f')
     return
 
 

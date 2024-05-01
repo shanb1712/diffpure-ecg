@@ -29,6 +29,8 @@ if __name__ == "__main__":
                         help='path to folder containing tnmg database')
     parser.add_argument('--train', action='store_true',
                         help='train the classifier from scratch (default: False)')
+    parser.add_argument('--n_leads', type=int, default=1,
+                        help='how many leads to train on, choose between [1,12] (default: lead 6)')
     parser.add_argument('--epochs', type=int, default=70,
                         help='maximum number of epochs (default: 70)')
     parser.add_argument('--seed', type=int, default=2,
@@ -96,7 +98,7 @@ if __name__ == "__main__":
         validation_generator = DataLoader(validation_set, **params)
 
         tqdm.write("Define model...")
-        N_LEADS = 1  # Only lead 6
+        N_LEADS = args.n_leads
         N_CLASSES = 6
         model = ResNet1d(input_dim=(N_LEADS, args.seq_length),
                          blocks_dim=list(zip(args.net_filter_size, args.net_seq_lengh)),
@@ -158,7 +160,7 @@ if __name__ == "__main__":
         with open(config_path, 'r') as f:
             config_dict = json.load(f)
         # Get model
-        N_LEADS = 1
+        N_LEADS = args.n_leads
         N_CLASSES = 6
         model = ResNet1d(input_dim=(N_LEADS, config_dict['seq_length']),
                          blocks_dim=list(zip(config_dict['net_filter_size'], config_dict['net_seq_lengh'])),
@@ -194,6 +196,6 @@ if __name__ == "__main__":
 
         # Report and save performance
 
-        report_performance(output_file='./performance/resnet/compare_scores',
+        report_performance(output_file=pathlib.PurePath('./performance/resnet/compare_scores'),
                            path_to_annotators=path_to_test_files / 'csv_files',
                            y_pred=predicted_y)
