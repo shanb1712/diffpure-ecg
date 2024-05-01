@@ -5,6 +5,7 @@ from tqdm import tqdm
 import metrics
 import pandas as pd
 
+
 def train(model, config, train_loader, device, valid_loader=None, valid_epoch_interval=5, foldername="", min_lr=1e-7):
     optimizer = Adam(model.parameters(), lr=config["lr"])
     # ema = EMA(0.9)
@@ -94,7 +95,7 @@ def train(model, config, train_loader, device, valid_loader=None, valid_epoch_in
     torch.save(model.state_dict(), final_path)
 
 
-def evaluate(model, test_loader, shots, device, foldername=""):
+def evaluate(model, test_loader, shots, device, foldername):
     ssd_total = []
     mad_total = []
     prd_total = []
@@ -102,6 +103,7 @@ def evaluate(model, test_loader, shots, device, foldername=""):
     snr_noise = []
     snr_recon = []
     snr_improvement = []
+    performance = pd.DataFrame(columns=['shots', 'ssd', 'mad', 'prd', 'cos_sim', 'snr_in', 'snr_out', 'snr_improve'])
 
     restored_sig = []
     for batch_no, (noisy_batch, clean_batch) in enumerate(test_loader, 1):
@@ -141,7 +143,19 @@ def evaluate(model, test_loader, shots, device, foldername=""):
     snr_improvement = np.concatenate(snr_improvement, axis=0)
     restored_sig = np.concatenate(restored_sig)
 
-    # np.save(foldername + '/denoised.npy', restored_sig)
+    # np.save(foldername / 'denoised.npy', restored_sig)
+    performance = pd.concat([performance, pd.DataFrame({"shots": shots, "ssd": ssd_total.mean(),
+                                                      "mad": mad_total.mean(), "prd": prd_total.mean(),
+                                                      'cos_sim': cos_sim_total.mean(),
+                                                      'snr_in': snr_noise.mean(),
+                                                      'snr_out': snr_recon.mean(),
+                                                      'snr_improve': snr_improvement.mean()}, index=['mean'])])
+    performance = pd.concat([performance, pd.DataFrame({"shots": shots, "ssd": ssd_total.std(),
+                                                      "mad": mad_total.std(), "prd": prd_total.std(),
+                                                      'cos_sim': cos_sim_total.std(),
+                                                      'snr_in': snr_noise.std(),
+                                                      'snr_out': snr_recon.std(),
+                                                      'snr_improve': snr_improvement.std()}, index=['std'])])
 
     print('******************' + str(shots) + '-shots' + '******************')
     print('******************ALL******************')
@@ -152,3 +166,4 @@ def evaluate(model, test_loader, shots, device, foldername=""):
     print("snr_in: ", snr_noise.mean(), '$\pm$', snr_noise.std(), )
     print("snr_out: ", snr_recon.mean(), '$\pm$', snr_recon.std(), )
     print("snr_improve: ", snr_improvement.mean(), '$\pm$', snr_improvement.std(), )
+    performance.T.to_csv(foldername / 'performance.csv', mode='a', header=False)
