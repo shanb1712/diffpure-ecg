@@ -18,6 +18,7 @@ for classifier_name in resnetEcg; do
             --seed $seed \
             --data_seed $data_seed \
             --diffusion_type DeScoDECG \
+            --sample_step 5 \
 
         done
       done
