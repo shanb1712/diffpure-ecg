@@ -13,29 +13,15 @@ import pathlib
 import h5py
 import numpy as np
 import os
+import pandas as pd
 
 import torch
 import torch.nn as nn
 import models as models
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
-from classifier_utils import load_annotators
-
-
-def compute_n_params(model, return_str=True):
-    tot = 0
-    for p in model.parameters():
-        w = 1
-        for x in p.shape:
-            w *= x
-        tot += w
-    if return_str:
-        if tot >= 1e6:
-            return '{:.1f}M'.format(tot / 1e6)
-        else:
-            return '{:.1f}K'.format(tot / 1e3)
-    else:
-        return tot
+from torchmetrics import AveragePrecision
+from classifier_utils import score_fun, load_annotators, get_scores
 
 
 class Logger(object):
@@ -108,17 +94,6 @@ def dict2namespace(config):
     return namespace
 
 
-def str2bool(v):
-    if isinstance(v, bool):
-        return v
-    if v.lower() in ('yes', 'true', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
-
-
 def update_state_dict(state_dict, idx_start=9):
     from collections import OrderedDict
     new_state_dict = OrderedDict()
@@ -130,16 +105,33 @@ def update_state_dict(state_dict, idx_start=9):
 
 
 # ------------------------------------------------------------------------
-def get_accuracy(model, x_orig, y_orig, bs=64, device=torch.device('cuda')):
+def run_inference(model, x_orig, bs=64, device=torch.device('cuda')):
     n_batches = x_orig.shape[0] // bs
-    acc = 0.
-    for counter in range(n_batches):
+    y_pred_all = []
+    outputs_all = []
+    for counter in range(n_batches+1):
         x = x_orig[counter * bs:min((counter + 1) * bs, x_orig.shape[0])].clone().to(device)
-        y = y_orig[counter * bs:min((counter + 1) * bs, x_orig.shape[0])].clone().to(device)
-        y_pred, _ = model(x, mode='classify')
-        acc += y.eq(y_pred).all(1).sum()
+        y_pred, outputs = model(x, mode='classify')
+        y_pred_all.append(y_pred)
+        outputs_all.append(outputs)
+    return torch.cat(y_pred_all, dim=0), torch.cat(outputs_all, dim=0)
 
-    return (acc / x_orig.shape[0]).item()
+
+def report_performance(y_orig, y_pred, outputs, output_path, tag, print_precision=False):
+    diagnosis = ['1dAVb', 'RBBB', 'LBBB', 'SB', 'AF', 'ST']
+    nclasses = y_orig.shape[-1]
+    acc = y_orig.eq(y_pred).all(1).sum()
+    # Get micro average precision
+    print('Accuracy: {:.2%}'.format((acc / y_orig.shape[0]).item()))
+    if print_precision:
+        average_precision = AveragePrecision(task="multilabel", num_labels=nclasses, average='micro')
+        micro_avg_precision = average_precision(outputs.detach().cpu(), y_orig.detach().cpu().int())
+        print('Micro average precision:  {:.2%}'.format(micro_avg_precision.item()))
+
+    scores = get_scores(y_orig.detach().cpu(), y_pred.detach().cpu(), score_fun)
+    scores_df = pd.DataFrame(scores, index=diagnosis, columns=score_fun.keys())
+    scores_df.to_csv(f"{output_path}/{tag}_scores.csv", float_format='%.3f')
+    return (acc / y_orig.shape[0]).item()
 
 
 def get_signal_classifier(classifier_name, config, classifier_path, device=None):

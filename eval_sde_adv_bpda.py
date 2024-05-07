@@ -20,7 +20,7 @@ import torch.nn as nn
 
 import adv_utils
 from bpda_eot.bpda_eot_attack import BPDA_EOT_Attack
-from adv_utils import str2bool, get_accuracy, get_signal_classifier, load_data
+from adv_utils import report_performance, get_signal_classifier, load_data, run_inference
 from runners.diffpure_ecg import DeScoDECG
 
 
@@ -108,6 +108,7 @@ class SDE_Adv_Model(nn.Module):
 
 
 def eval_bpda(args, config, model, x_val, y_val, adv_batch_size, log_dir):
+    acc = {}
     ngpus = torch.cuda.device_count()
     model_ = model
     if ngpus > 1:
@@ -122,18 +123,20 @@ def eval_bpda(args, config, model, x_val, y_val, adv_batch_size, log_dir):
         resnet_bpda = torch.nn.DataParallel(resnet_bpda)
 
     start_time = time.time()
-    init_acc = get_accuracy(resnet_bpda, x_val, y_val, bs=adv_batch_size, device=config.device)
-    print('initial accuracy: {:.2%}, time elapsed: {:.2f}s'.format(init_acc, time.time() - start_time))
+    y_pred, outputs = run_inference(resnet_bpda, x_val, bs=adv_batch_size, device=torch.device('cuda'))
+    acc['initial_resnet'] = report_performance(y_val, y_pred, outputs,
+                                        output_path=args.log_dir, tag='initial_resnet', print_precision=True)
+    print('Time elapsed: {:.2f}s'.format(time.time() - start_time))
 
     adversary_resnet = BPDA_EOT_Attack(resnet_bpda, adv_eps=args.adv_eps, eot_defense_reps=args.eot_defense_reps,
                                        eot_attack_reps=args.eot_attack_reps)
 
     start_time = time.time()
     class_batch, ims_adv_batch = adversary_resnet.attack_all(x_val, y_val, batch_size=adv_batch_size)
-    init_acc = float(class_batch[0, :].sum()) / class_batch.shape[1]
-    robust_acc = float(class_batch[-1, :].sum()) / class_batch.shape[1]
-
-    print('init acc: {:.2%}, robust acc: {:.2%}, time elapsed: {:.2f}s'.format(init_acc, robust_acc,
+    y_pred, outputs = adversary_resnet.get_logit(ims_adv_batch.to(config.device))
+    acc['adv_resnet'] = report_performance(y_val, y_pred, outputs,
+                                           output_path=args.log_dir, tag='adv_resnet', print_precision=True)
+    print('init acc: {:.2%}, robust acc: {:.2%}, time elapsed: {:.2f}s'.format(acc['initial_resnet'], acc['adv_resnet'],
                                                                                time.time() - start_time))
 
     print(f'x_adv_resnet shape: {ims_adv_batch.shape}')
@@ -145,24 +148,27 @@ def eval_bpda(args, config, model, x_val, y_val, adv_batch_size, log_dir):
     start_time = time.time()
     model_.reset_counter()
     model_.set_tag('no_adv')
-    init_acc = get_accuracy(model, x_val, y_val, bs=adv_batch_size)
-    print('initial accuracy: {:.2%}, time elapsed: {:.2f}s'.format(init_acc, time.time() - start_time))
+    y_pred, outputs = run_inference(model_, x_val, bs=adv_batch_size, device=torch.device('cuda'))
+    acc['initial_sde_adv'] = report_performance(y_val, y_pred, outputs,
+                                        output_path=args.log_dir, tag='initial_sde_adv', print_precision=True)
+    print('Time elapsed: {:.2f}s'.format(time.time() - start_time))
 
-    adversary_sde = BPDA_EOT_Attack(model, adv_eps=args.adv_eps, eot_defense_reps=args.eot_defense_reps,
+    adversary_sde = BPDA_EOT_Attack(model_, adv_eps=args.adv_eps, eot_defense_reps=args.eot_defense_reps,
                                     eot_attack_reps=args.eot_attack_reps)
 
     start_time = time.time()
     model_.reset_counter()
     model_.set_tag()
     class_batch, ims_adv_batch = adversary_sde.attack_all(x_val, y_val, batch_size=adv_batch_size)
-    init_acc = float(class_batch[0, :].sum()) / class_batch.shape[1]
-    robust_acc = float(class_batch[-1, :].sum()) / class_batch.shape[1]
-
-    print('init acc: {:.2%}, robust acc: {:.2%}, time elapsed: {:.2f}s'.format(init_acc, robust_acc,
+    y_pred, outputs = adversary_sde.get_logit(ims_adv_batch.to(config.device), mode='purify_and_classify')
+    acc['sde_adv'] = report_performance(y_val, y_pred, outputs,
+                                           output_path=args.log_dir, tag='sde_adv', print_precision=True)
+    print('init acc: {:.2%}, robust acc: {:.2%}, time elapsed: {:.2f}s'.format(acc['initial_sde_adv'], acc['sde_adv'],
                                                                                time.time() - start_time))
 
     print(f'x_adv_sde shape: {ims_adv_batch.shape}')
     torch.save([ims_adv_batch, y_val], f'{log_dir}/x_adv_sde_sd{args.seed}.pt')
+    pd.DataFrame(acc, index=['accuracy']).to_csv(f"{log_dir}/accuracy.csv", float_format='%.3f')
 
 
 def robustness_eval(args, config):

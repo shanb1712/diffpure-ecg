@@ -18,7 +18,7 @@ criterion = torch.nn.BCELoss()
 
 
 class BPDA_EOT_Attack():
-    def __init__(self, model, adv_eps=8.0/255, eot_defense_reps=150, eot_attack_reps=15):
+    def __init__(self, model, adv_eps=8.0 / 255, eot_defense_reps=150, eot_attack_reps=15):
         self.model = model
 
         self.config = {
@@ -40,11 +40,12 @@ class BPDA_EOT_Attack():
 
     def eot_defense_prediction(seslf, logits, reps=1, eot_defense_ave="loss"):
         if eot_defense_ave == 'logits':
-            logits_pred = logits.view([reps, int(logits.shape[0]/reps), logits.shape[1]]).mean(0)
+            logits_pred = logits.view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(0)
         elif eot_defense_ave == 'softmax':
-            logits_pred = F.softmax(logits, dim=1).view([reps, int(logits.shape[0]/reps), logits.shape[1]]).mean(0)
+            logits_pred = F.softmax(logits, dim=1).view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(0)
         elif eot_defense_ave == 'logsoftmax':
-            logits_pred = F.log_softmax(logits, dim=1).view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(0)
+            logits_pred = F.log_softmax(logits, dim=1).view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(
+                0)
         elif reps == 1:
             logits_pred = logits
         else:
@@ -57,10 +58,12 @@ class BPDA_EOT_Attack():
             logits_loss = logits.view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(0)
             y_loss = y
         elif eot_attack_ave == 'softmax':
-            logits_loss = torch.log(F.softmax(logits, dim=1).view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(0))
+            logits_loss = torch.log(
+                F.softmax(logits, dim=1).view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(0))
             y_loss = y
         elif eot_attack_ave == 'logsoftmax':
-            logits_loss = F.log_softmax(logits, dim=1).view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(0)
+            logits_loss = F.log_softmax(logits, dim=1).view([reps, int(logits.shape[0] / reps), logits.shape[1]]).mean(
+                0)
             y_loss = y
         elif eot_attack_ave == 'loss':
             logits_loss = logits
@@ -69,6 +72,11 @@ class BPDA_EOT_Attack():
             raise RuntimeError('Invalid ave_method_eot ("logits", "softmax", "logsoftmax", "loss")')
         loss = criterion(logits_loss, y_loss.float())
         return loss
+
+    def get_logit(self, X, mode='purify_and_classify'):
+        with torch.no_grad():
+            y_pred, output = self.model(X.data, mode=mode)
+        return y_pred, output
 
     def predict(self, X, y, requires_grad=True, reps=1, eot_defense_ave=None, eot_attack_ave='loss'):
         if requires_grad:
@@ -90,7 +98,8 @@ class BPDA_EOT_Attack():
         elif adv_norm == 'l_2':
             X_adv.data += adv_eta * grad / grad.view(X.shape[0], -1).norm(p=2, dim=1).view(X.shape[0], 1, 1, 1)
             dists = (X_adv - X).view(X.shape[0], -1).norm(dim=1, p=2).view(X.shape[0], 1, 1, 1)
-            X_adv = torch.clamp(X + torch.min(dists, adv_eps*torch.ones_like(dists))*(X_adv-X)/(dists+eps), min=0, max=1)
+            X_adv = torch.clamp(X + torch.min(dists, adv_eps * torch.ones_like(dists)) * (X_adv - X) / (dists + eps),
+                                min=0, max=1)
         else:
             raise RuntimeError('Invalid adv_norm ("l_inf" or "l_2"')
         return X_adv
@@ -104,7 +113,7 @@ class BPDA_EOT_Attack():
         if requires_grad:
             X_grads = torch.autograd.grad(loss, [X_repeat_purified])[0]
             # average gradients over parallel samples for EOT attack
-            attack_grad = X_grads.view([purify_reps]+list(X.shape)).mean(dim=0)
+            attack_grad = X_grads.view([purify_reps] + list(X.shape)).mean(dim=0)
             return correct, attack_grad
         else:
             return correct, None
@@ -112,8 +121,9 @@ class BPDA_EOT_Attack():
     def eot_defense_verification(self, X_adv, y, correct, defended):
         for verify_ind in range(correct.nelement()):
             if correct[verify_ind] == 0 and defended[verify_ind] == 1:
-                defended[verify_ind] = self.purify_and_predict(X_adv[verify_ind].unsqueeze(0), y[verify_ind].unsqueeze(0),
-                                                               self.config['eot_defense_reps'], requires_grad=False)[0]
+                defended[verify_ind] = \
+                self.purify_and_predict(X_adv[verify_ind].unsqueeze(0), y[verify_ind].unsqueeze(0),
+                                        self.config['eot_defense_reps'], requires_grad=False)[0]
         return defended
 
     def eval_and_bpda_eot_grad(self, X_adv, y, defended, requires_grad=True):
@@ -141,14 +151,15 @@ class BPDA_EOT_Attack():
         # adversarial attacks on a single batch of images
         for step in range(self.config['adv_steps'] + 1):
             defended, attack_grad = self.eval_and_bpda_eot_grad(X_adv, y, defended)
-            class_batch[step+1] = defended.cpu()
+            class_batch[step + 1] = defended.cpu()
             for ind in range(defended.nelement()):
                 if class_batch[step, ind] == 1 and defended[ind] == 0:
                     ims_adv_batch[ind] = X_adv[ind].cpu()
 
             # update adversarial images (except on final iteration so final adv images match final eval)
             if step < self.config['adv_steps']:
-                X_adv = self.pgd_update(X_adv, attack_grad, X, self.config['adv_norm'], self.config['adv_eps'], self.config['adv_eta'])
+                X_adv = self.pgd_update(X_adv, attack_grad, X, self.config['adv_norm'], self.config['adv_eps'],
+                                        self.config['adv_eta'])
                 X_adv = X_adv.detach().clone()
 
             if step == 1 or step % self.config['log_freq'] == 0 or step == self.config['adv_steps']:
@@ -172,7 +183,7 @@ class BPDA_EOT_Attack():
         n_batches = X.shape[0] // batch_size
         if n_batches == 0 and X.shape[0] > 0:
             n_batches = 1
-        for counter in range(n_batches):
+        for counter in range(n_batches + 1):
             X_batch = X[counter * batch_size:min((counter + 1) * batch_size, X.shape[0])].clone().to(X.device)
             y_batch = y[counter * batch_size:min((counter + 1) * batch_size, X.shape[0])].clone().to(X.device)
 
