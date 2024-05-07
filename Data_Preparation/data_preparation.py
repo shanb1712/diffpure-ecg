@@ -1,3 +1,10 @@
+# ---------------------------------------------------------------
+# This file has been modified from Score-based-ECG-Denoising.
+#
+# Source:
+# https://github.com/HuayuLiArizona/Score-based-ECG-Denoising/blob/main/Data_Preparation/Data_preparation.py
+#
+# ---------------------------------------------------------------
 import numpy as np
 import _pickle as pickle
 import pathlib
@@ -6,21 +13,14 @@ import pandas as pd
 
 
 # from Data_Preparation import Prepare_NSTDB
-
-
-def get_data(y, traces_ids):
-    # ----- Data settings ----- #
-    diagnosis = ["1dAVb", "RBBB", "LBBB", "SB", "AF", "ST"]
-    # ------------------------- #
-    y.set_index('id_exam', drop=True, inplace=True)
-    y = y.reindex(traces_ids, copy=False)
-    df_diagnosis = y.reindex(columns=[d for d in diagnosis])
-    y = df_diagnosis.values
-    return y
+from classifier_utils import get_data
 
 
 def Load_Data(path_to_hdf5, path_to_csv, portion=None):
     # Get tracings
+    path_to_hdf5 = pathlib.PurePath(path_to_hdf5)
+    path_to_csv = pathlib.PurePath(path_to_csv)
+
     f = h5py.File(path_to_hdf5 / 'traces.hdf5', "r")
     x = f['signal']
 
@@ -38,15 +38,16 @@ def Load_Data(path_to_hdf5, path_to_csv, portion=None):
     return x, y, idx_train, idx_val
 
 
-def Load_Noise(noise_test_len=0, noise_version=1, path_to_save=None):
-    path_to_data = pathlib.PurePath('./data/')
+def Load_Noise(noise_test_len=0, noise_version=1, path_to_data='./data/', path_to_save='./check_points/', prepare=False,):
+    path_to_data = pathlib.PurePath(path_to_data)
     print('Getting the Data ready ... ')
 
     # The seed is used to ensure the ECG always have the same contamination level
     # this enhance reproducibility
     seed = 1234
     np.random.seed(seed=seed)
-    # Prepare_NSTDB.prepare(path_to_data)
+    # if prepare:
+    #     Prepare_NSTDB.prepare(path_to_data)
 
     # Load NSTDB
     with open(path_to_data / 'NoiseBWL.pkl', 'rb') as input:
@@ -80,7 +81,8 @@ def Load_Noise(noise_test_len=0, noise_version=1, path_to_save=None):
     if noise_test_len > 0:
         rnd_test = np.random.randint(low=20, high=200, size=noise_test_len) / 100
         # Saving the random array so we can use it on the amplitude segmentation tables
-        np.save(path_to_save / 'rnd_test.npy', rnd_test)
+        path_to_save = pathlib.PurePath(path_to_save)
+        np.save(path_to_save / f'noise_type_{noise_version}' / 'rnd_test.npy', rnd_test)
         print('rnd_test shape: ' + str(rnd_test.shape))
 
     return noise_train, noise_test

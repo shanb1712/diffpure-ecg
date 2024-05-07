@@ -215,7 +215,7 @@ def load_data(args):
 
 
 @torch.no_grad()
-def save_signal(tensor, fp, format, fs=1, xlim_range=None) -> None:
+def save_signal(tensor, fp, format=None, fs=1, xlim_range=None) -> None:
     if len(tensor.size()) > 2:
         tensor = tensor.squeeze(1)
     t_shape = tensor.size()

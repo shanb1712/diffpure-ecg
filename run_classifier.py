@@ -1,9 +1,17 @@
+# ---------------------------------------------------------------
+# This file has been modified from automatic-ecg-diagnosis.
+#
+# Source:
+# https://github.com/antonior92/automatic-ecg-diagnosis/blob/tensorflow-v1/train.py
+#
+# ---------------------------------------------------------------
+
 import json
 import pathlib
 import torch
 import os
 from tqdm import tqdm
-from resnet import ResNet1d
+from resnetEcg import ResNet1d
 import torch.optim as optim
 import numpy as np
 from torch.utils.data import DataLoader
@@ -24,7 +32,7 @@ if __name__ == "__main__":
                                      description='Train model to predict arrhythmias from the raw ecg tracing.')
     parser.add_argument("--config", type=str, default="resnet_base.json",
                         help="model hyperparameters")
-    parser.add_argument('--device', default='cuda:0', help='Device')
+    parser.add_argument('--device', default='cuda:1', help='Device')
     parser.add_argument('--path_to_database', type=str,
                         help='path to folder containing tnmg database')
     parser.add_argument('--train', action='store_true',
@@ -155,7 +163,7 @@ if __name__ == "__main__":
         tqdm.write("Done!")
     else:
         # Get checkpoint
-        ckpt = torch.load(foldername / "model.pth", map_location=lambda storage, loc: storage)
+        ckpt = torch.load(str(foldername / "model.pth"), map_location=lambda storage, loc: storage)
         # Get config
         with open(config_path, 'r') as f:
             config_dict = json.load(f)
@@ -174,7 +182,7 @@ if __name__ == "__main__":
         # get data
         # Import data
         with h5py.File(path_to_test_files / 'ecg_tracings.hdf5', "r") as f:
-            x = np.array(f['tracings'])
+            x = np.array(f['tracings'])[:, :, 5]
 
         # Evaluate on test data
         model.eval()
@@ -186,8 +194,8 @@ if __name__ == "__main__":
         print('Evaluating...')
         for batch_no in range(len(x) // config_dict['batch_size'] + 1):
             batch_x = x[batch_no * config_dict['batch_size']: (batch_no + 1) * config_dict['batch_size']]
+            batch_x = batch_x.reshape(batch_x.shape[0], 1, batch_x.shape[1])
             batch_x = torch.FloatTensor(batch_x)
-            batch_x = batch_x.permute(0, 2, 1)
             with torch.no_grad():
                 batch_x = batch_x.to(device, dtype=torch.float32)
                 y_pred = model(batch_x)
@@ -196,6 +204,7 @@ if __name__ == "__main__":
 
         # Report and save performance
 
-        report_performance(output_file=pathlib.PurePath('./performance/resnet/compare_scores'),
+        report_performance(output_path=pathlib.PurePath('./performance/resnet'),
+                           model_path=foldername,
                            path_to_annotators=path_to_test_files / 'csv_files',
                            y_pred=predicted_y)

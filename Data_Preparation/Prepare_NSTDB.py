@@ -1,7 +1,16 @@
+# ---------------------------------------------------------------
+# This file has been modified from Score-based-ECG-Denoising.
+#
+# Source:
+# https://github.com/HuayuLiArizona/Score-based-ECG-Denoising/blob/main/Data_Preparation/Prepare_NSTDB.py
+#
+# ---------------------------------------------------------------
+
 import wfdb
 import _pickle as pickle
 from scipy.signal import resample_poly
 import math
+import pathlib
 
 
 def resample_noise(signal, orig_fs, actual_fs):
@@ -17,6 +26,7 @@ def resample_noise(signal, orig_fs, actual_fs):
 
 
 def prepare(path_to_data):
+    path_to_data = pathlib.PurePath(path_to_data)
     bw_signals, bw_fields = wfdb.rdsamp(path_to_data / 'mit-bih-noise-stress-test-database-1.0.0/' / 'bw')
     em_signals, em_fields = wfdb.rdsamp(path_to_data / 'mit-bih-noise-stress-test-database-1.0.0/' / 'em')
     ma_signals, ma_fields = wfdb.rdsamp(path_to_data / 'mit-bih-noise-stress-test-database-1.0.0/' / 'ma')
