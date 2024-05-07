@@ -1,3 +1,11 @@
+# ---------------------------------------------------------------
+# This file has been modified from Score-based-ECG-Denoising.
+#
+# Source:
+# https://github.com/HuayuLiArizona/Score-based-ECG-Denoising/blob/main/utils.py
+#
+# ---------------------------------------------------------------
+
 import numpy as np
 import torch
 from torch.optim import Adam
@@ -145,17 +153,17 @@ def evaluate(model, test_loader, shots, device, foldername):
 
     # np.save(foldername / 'denoised.npy', restored_sig)
     performance = pd.concat([performance, pd.DataFrame({"shots": shots, "ssd": ssd_total.mean(),
-                                                      "mad": mad_total.mean(), "prd": prd_total.mean(),
-                                                      'cos_sim': cos_sim_total.mean(),
-                                                      'snr_in': snr_noise.mean(),
-                                                      'snr_out': snr_recon.mean(),
-                                                      'snr_improve': snr_improvement.mean()}, index=['mean'])])
+                                                        "mad": mad_total.mean(), "prd": prd_total.mean(),
+                                                        'cos_sim': cos_sim_total.mean(),
+                                                        'snr_in': snr_noise.mean(),
+                                                        'snr_out': snr_recon.mean(),
+                                                        'snr_improve': snr_improvement.mean()}, index=['mean'])])
     performance = pd.concat([performance, pd.DataFrame({"shots": shots, "ssd": ssd_total.std(),
-                                                      "mad": mad_total.std(), "prd": prd_total.std(),
-                                                      'cos_sim': cos_sim_total.std(),
-                                                      'snr_in': snr_noise.std(),
-                                                      'snr_out': snr_recon.std(),
-                                                      'snr_improve': snr_improvement.std()}, index=['std'])])
+                                                        "mad": mad_total.std(), "prd": prd_total.std(),
+                                                        'cos_sim': cos_sim_total.std(),
+                                                        'snr_in': snr_noise.std(),
+                                                        'snr_out': snr_recon.std(),
+                                                        'snr_improve': snr_improvement.std()}, index=['std'])])
 
     print('******************' + str(shots) + '-shots' + '******************')
     print('******************ALL******************')

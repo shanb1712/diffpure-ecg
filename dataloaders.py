@@ -3,13 +3,19 @@ import torch
 
 
 class Diffusion_Dataset(torch.utils.data.Dataset):
-    def __init__(self, x_set, noise, partition, test=False):
+    '''
+    Data to the diffusion model training and evaluation will be loaded using this dataset.
+    It first loads the clean batch (x_clean/y), and then adds noise to it (x).
+    If the test set is loaded, then noise is sampled from a pre-saved .pkl file as done in the
+    original paper so it can be used on the amplitude segmentation tables.
+    '''
+    def __init__(self, x_set, noise, partition, test=False, rnd_noise_path='./check_points/'):
         self.test = test
         self.x_clean = x_set
         self.noise = noise
         self.indices = partition
         if test:
-            self.rnd_noise = dict(zip(partition, np.load('rnd_test.npy')))
+            self.rnd_noise = dict(zip(partition, np.load(f'{rnd_noise_path}noise_type_{noise}/rnd_test.npy')))
         self.noise_index = 0
 
     def __len__(self):

@@ -1,3 +1,11 @@
+# ---------------------------------------------------------------
+# This file has been modified from Score-based-ECG-Denoising.
+#
+# Source:
+# https://github.com/HuayuLiArizona/Score-based-ECG-Denoising/blob/main/main_model.py
+#
+# ---------------------------------------------------------------
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -23,15 +31,18 @@ class DDPM(nn.Module):
         self.config = config
         self.device = device
         self.conditional = conditional
-        
+
         self.loss_func = nn.L1Loss(reduction='sum').to(device)
-        
-        config_diff = config["diffusion"]
-        
+
+        if isinstance(config, dict):
+            config_diff = config["diffusion"]
+        else:
+            config_diff = vars(config.diffusion)
+
         self.num_steps = config_diff["num_steps"]
-        
+
         self.set_new_noise_schedule(config_diff, device)
-        
+
     def make_beta_schedule(self, schedule='linear', n_timesteps=1000, start=1e-5, end=1e-2):
         if schedule == 'linear':
             betas = torch.linspace(start, end, n_timesteps)
@@ -41,23 +52,22 @@ class DDPM(nn.Module):
             betas = torch.linspace(-6, 6, n_timesteps)
             betas = torch.sigmoid(betas) * (end - start) + start
         return betas
-    
-    
+
     def set_new_noise_schedule(self, config_diff, device):
-        
+
         to_torch = partial(torch.tensor, dtype=torch.float32, device=device)
-        
+
         betas = self.make_beta_schedule(schedule=config_diff["schedule"], n_timesteps=config_diff["num_steps"],
-                                            start=config_diff["beta_start"], end=config_diff["beta_end"])
+                                        start=config_diff["beta_start"], end=config_diff["beta_end"])
         betas = betas.detach().cpu().numpy() if isinstance(
             betas, torch.Tensor) else betas
-        
+
         alphas = 1. - betas
         alphas_cumprod = np.cumprod(alphas, axis=0)
         alphas_cumprod_prev = np.append(1., alphas_cumprod[:-1])
         self.sqrt_alphas_cumprod_prev = np.sqrt(
             np.append(1., alphas_cumprod))
-        
+
         self.register_buffer('betas', to_torch(betas))
         self.register_buffer('alphas_cumprod', to_torch(alphas_cumprod))
         self.register_buffer('alphas_cumprod_prev',
@@ -74,7 +84,7 @@ class DDPM(nn.Module):
                              to_torch(np.sqrt(1. / alphas_cumprod)))
         self.register_buffer('sqrt_recipm1_alphas_cumprod',
                              to_torch(np.sqrt(1. / alphas_cumprod - 1)))
-        
+
         # calculations for posterior q(x_{t-1} | x_t, x_0)
         posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
         # above: equal to 1. / (1. / (1. - alpha_cumprod_tm1) + alpha_t / beta_t)
@@ -87,22 +97,21 @@ class DDPM(nn.Module):
             betas * np.sqrt(alphas_cumprod_prev) / (1. - alphas_cumprod)))
         self.register_buffer('posterior_mean_coef2', to_torch(
             (1. - alphas_cumprod_prev) * np.sqrt(alphas) / (1. - alphas_cumprod)))
-        
-        
+
     def predict_start_from_noise(self, x_t, t, noise):
         return self.sqrt_recip_alphas_cumprod[t] * x_t - \
-            self.sqrt_recipm1_alphas_cumprod[t] * noise
-    
+               self.sqrt_recipm1_alphas_cumprod[t] * noise
+
     def q_posterior(self, x_start, x_t, t):
         posterior_mean = self.posterior_mean_coef1[t] * \
-            x_start + self.posterior_mean_coef2[t] * x_t
+                         x_start + self.posterior_mean_coef2[t] * x_t
         posterior_log_variance_clipped = self.posterior_log_variance_clipped[t]
         return posterior_mean, posterior_log_variance_clipped
-    
+
     def p_mean_variance(self, x, t, clip_denoised: bool, condition_x=None):
         batch_size = x.shape[0]
         noise_level = torch.FloatTensor(
-            [self.sqrt_alphas_cumprod_prev[t+1]]).repeat(batch_size, 1).to(x.device)
+            [self.sqrt_alphas_cumprod_prev[t + 1]]).repeat(batch_size, 1).to(x.device)
         if condition_x is not None:
             x_recon = self.predict_start_from_noise(
                 x, t=t, noise=self.model(x, condition_x, noise_level))
@@ -116,7 +125,7 @@ class DDPM(nn.Module):
         model_mean, posterior_log_variance = self.q_posterior(
             x_start=x_recon, x_t=x, t=t)
         return model_mean, posterior_log_variance
-    
+
     @torch.no_grad()
     def p_sample(self, x, t, clip_denoised=False, condition_x=None):
         model_mean, model_log_variance = self.p_mean_variance(
@@ -127,7 +136,7 @@ class DDPM(nn.Module):
     @torch.no_grad()
     def p_sample_loop(self, x_in, continous=False):
         device = self.betas.device
-        sample_inter = (1 | (self.num_steps//10))
+        sample_inter = (1 | (self.num_steps // 10))
         if not self.conditional:
             shape = x_in
             cur_x = torch.randn(shape, device=device)
@@ -145,29 +154,29 @@ class DDPM(nn.Module):
                 cur_x = self.p_sample(cur_x, i, condition_x=x)
                 if i % sample_inter == 0:
                     ret_x.append(cur_x)
-        
+
         if continous:
             return ret_x
         else:
-            return ret_x[-1]    
-    
+            return ret_x[-1]
+
     @torch.no_grad()
     def sample(self, batch_size=1, shape=[1, 4096], continous=False):
         return self.p_sample_loop((batch_size, shape[0], shape[1]), continous)
-    
+
     @torch.no_grad()
     def denoising(self, x_in, continous=False):
         return self.p_sample_loop(x_in, continous)
-    
+
     def q_sample_loop(self, x_start, continous=False):
-        sample_inter = (1 | (self.num_steps//10))
+        sample_inter = (1 | (self.num_steps // 10))
         ret_x = [x_start]
         cur_x = x_start
-        for t in range(1, self.num_steps+1):
-            B,C,L = cur_x.shape
+        for t in range(1, self.num_steps + 1):
+            B, C, L = cur_x.shape
             continuous_sqrt_alpha_cumprod = torch.FloatTensor(
                 np.random.uniform(
-                    self.sqrt_alphas_cumprod_prev[t-1],
+                    self.sqrt_alphas_cumprod_prev[t - 1],
                     self.sqrt_alphas_cumprod_prev[t],
                     size=B
                 )
@@ -184,25 +193,25 @@ class DDPM(nn.Module):
             return ret_x
         else:
             return ret_x[-1]
-    
+
     def q_sample(self, x_start, continuous_sqrt_alpha_cumprod, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
 
         # random gama
         return (
-            continuous_sqrt_alpha_cumprod * x_start +
-            (1 - continuous_sqrt_alpha_cumprod**2).sqrt() * noise
+                continuous_sqrt_alpha_cumprod * x_start +
+                (1 - continuous_sqrt_alpha_cumprod ** 2).sqrt() * noise
         )
-    
+
     def p_losses(self, x_in, y_in, noise=None):
-        #x_in: clean signal
-        #y_in: noisy signal as condition
+        # x_in: clean signal
+        # y_in: noisy signal as condition
         x_start = x_in
-        B,C,L = x_start.shape  # n_batch, 1, length
+        B, C, L = x_start.shape  # n_batch, 1, length
         t = np.random.randint(1, self.num_steps + 1)
         continuous_sqrt_alpha_cumprod = torch.FloatTensor(
             np.random.uniform(
-                self.sqrt_alphas_cumprod_prev[t-1],
+                self.sqrt_alphas_cumprod_prev[t - 1],
                 self.sqrt_alphas_cumprod_prev[t],
                 size=B
             )
@@ -221,11 +230,11 @@ class DDPM(nn.Module):
 
         loss = self.loss_func(noise, x_recon)
         return loss
-    
+
     def forward(self, x, y, *args, **kwargs):
         return self.p_losses(x, y, *args, **kwargs)
-    
-    
+
+
 class EMA(object):
     def __init__(self, mu=0.999):
         self.mu = mu

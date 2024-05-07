@@ -1,10 +1,17 @@
+# ---------------------------------------------------------------
+# This file has been modified from Score-based-ECG-Denoising.
+#
+# Source:
+# https://github.com/HuayuLiArizona/Score-based-ECG-Denoising/blob/main/main_exp.py
+#
+# ---------------------------------------------------------------
+
 import argparse
 import torch
 import yaml
 import pathlib
 from dataloaders import Diffusion_Dataset
 import os
-import pandas as pd
 from Data_Preparation.data_preparation import Load_Data, Load_Noise
 from tqdm import tqdm
 import h5py
