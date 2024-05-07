@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="diffpure-ecg" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true">
+  <component name="PublishConfigData" autoUpload="Always" serverName="diffpure-ecg">
     <serverData>
       <paths name="Fwave">
         <serverdata>
@@ -47,14 +47,14 @@
       <paths name="shanybiton@bm@132.68.176.119:22 password">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/shanybiton/repos/diffpure-ecg" local="$PROJECT_DIR$" />
+            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
       <paths name="shanybiton@bm@orion02:22 password">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/shanybiton/repos/diffpure-ecg" local="$PROJECT_DIR$" />
+            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

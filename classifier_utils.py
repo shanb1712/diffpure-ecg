@@ -1,3 +1,11 @@
+# ---------------------------------------------------------------
+# This file has been modified from automatic-ecg-diagnosis.
+#
+# Source:
+# https://github.com/antonior92/automatic-ecg-diagnosis/blob/tensorflow-v1/generate_figures_and_tables.py
+#
+# ---------------------------------------------------------------
+
 import pandas as pd
 import numpy as np
 import torch
@@ -65,7 +73,7 @@ def load_annotators(path_to_files):
     return y_true, y_cardiologist1, y_cardiologist2, y_cardio, y_emerg, y_student
 
 
-def report_performance(output_file, path_to_annotators, y_pred):
+def report_performance(output_path, model_path, path_to_annotators, y_pred):
     y_true, y_cardiologist1, y_cardiologist2, y_cardio, y_emerg, y_student = load_annotators(path_to_annotators)
     _, _, our_threshold = get_optimal_precision_recall(torch.from_numpy(y_true), torch.from_numpy(y_pred))
     mask = y_pred > our_threshold
@@ -100,8 +108,10 @@ def report_performance(output_file, path_to_annotators, y_pred):
     scores_all_df = scores_all_df.reindex(level=0, columns=score_fun.keys())
 
     # Save results
-    scores_all_df.to_excel(f"{str(output_file)}.xlsx", float_format='%.3f')
-    scores_all_df.to_csv(f"{str(output_file)}.csv", float_format='%.3f')
+    scores_all_df.to_excel(output_path / "compare_scores.xlsx", float_format='%.3f')
+    scores_all_df.to_csv(output_path / "compare_scores.csv", float_format='%.3f')
+    np.save(model_path / "thresholds.npy", our_threshold, allow_pickle=True)
+    print(f'Saved threshold path: {model_path}/thresholds.npy')
     return
 
 

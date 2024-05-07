@@ -4,6 +4,13 @@
     <list>
       <list>
         <remote-mappings server-id="python@904d2478-f163-4ca3-a214-e33321555c7a" />
+        <remote-mappings server-id="python@sftp://shanybiton@bm@orion02:22/home/shanybiton/miniconda3/envs/diffpure/bin/python3">
+          <settings>
+            <list>
+              <mapping local-root="$PROJECT_DIR$" remote-root="/home/shanybiton/repos/diffpure-ecg" />
+            </list>
+          </settings>
+        </remote-mappings>
       </list>
     </list>
   </component>

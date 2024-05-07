@@ -1,3 +1,11 @@
+# ---------------------------------------------------------------
+# This file has been modified from ecg-age-prediction.
+#
+# Source:
+# https://github.com/antonior92/ecg-age-prediction/blob/main/resnet.py
+#
+# ---------------------------------------------------------------
+
 import torch
 import torch.nn as nn
 import numpy as np
