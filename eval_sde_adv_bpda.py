@@ -82,7 +82,7 @@ class SDE_Adv_Model(nn.Module):
             print(f'diffusion times: {counter}')
 
         start_time = time.time()
-        x_re = self.runner.image_editing_sample(x, bs_id=counter, tag=self.tag)
+        x_re = self.runner.signal_editing_sample(x, bs_id=counter, tag=self.tag)
         minutes, seconds = divmod(time.time() - start_time, 60)
 
         if counter % 5 == 0:
