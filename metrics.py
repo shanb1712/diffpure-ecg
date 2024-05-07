@@ -1,3 +1,11 @@
+# ---------------------------------------------------------------
+# This file has been modified from Score-based-ECG-Denoising.
+#
+# Source:
+# https://github.com/HuayuLiArizona/Score-based-ECG-Denoising/blob/main/metrics.py
+#
+# ---------------------------------------------------------------
+
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
