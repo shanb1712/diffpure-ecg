@@ -57,26 +57,32 @@ class DeScoDECG(torch.nn.Module):
                             fs=self.config.data.fs, xlim_range=[4, 7])
 
             xs = []
-            for it in range(self.args.sample_step):
-                e = torch.randn_like(x0)
-                total_noise_levels = self.args.t
-                a = (1 - self.betas).cumprod(dim=0)
-                x = x0 * a[total_noise_levels - 1].sqrt() + e * (1.0 - a[total_noise_levels - 1]).sqrt()
+            # for it in range(self.args.sample_step):
+                # e = torch.randn_like(x0)
+                # total_noise_levels = self.args.t
+                # a = (1 - self.betas).cumprod(dim=0)
+                # x = x0 * a[total_noise_levels - 1].sqrt() + e * (1.0 - a[total_noise_levels - 1]).sqrt()
 
-                if bs_id < 2:
-                    save_signal(x[:r_batch_size], os.path.join(out_dir, f'init_{it}.png'), fs=self.config.data.fs)
-                    save_signal(x[:r_batch_size], os.path.join(out_dir, f'init_{it}_zoom_in.png'),
-                                fs=self.config.data.fs, xlim_range=[4, 7])
+                # if bs_id < 2:
+                #     save_signal(x[:r_batch_size], os.path.join(out_dir, f'init_{it}.png'), fs=self.config.data.fs)
+                #     save_signal(x[:r_batch_size], os.path.join(out_dir, f'init_{it}_zoom_in.png'),
+                #                 fs=self.config.data.fs, xlim_range=[4, 7])
+            if self.args.sample_step > 1:
+                x = 0
+                for i in range(self.args.sample_step):
+                    x += self.model.denoising(x0)
+                x /= self.args.sample_step
+            else:
+                x = self.model.denoising(x0)  # B,1,L
+            x = x - torch.Tensor.mean(x, axis=2)[:, None]
 
-                x = self.model.denoising(x)
+            x0 = x
 
-                x0 = x
-
-                if bs_id < 2:
-                    save_signal(x0[:r_batch_size], os.path.join(out_dir, f'samples_{it}.png'), fs=self.config.data.fs)
-                    save_signal(x0[:r_batch_size], os.path.join(out_dir, f'samples_{it}_zoom_in.png'),
-                                fs=self.config.data.fs, xlim_range=[4, 7])
-                    torch.save(x0[:r_batch_size], os.path.join(out_dir, f'samples_{it}.pth'))
+            if bs_id < 2:
+                save_signal(x0[:r_batch_size], os.path.join(out_dir, f'denoised_sample.png'), fs=self.config.data.fs)
+                save_signal(x0[:r_batch_size], os.path.join(out_dir, f'denoised_sample_zoom_in.png'),
+                            fs=self.config.data.fs, xlim_range=[4, 7])
+                torch.save(x0[:r_batch_size], os.path.join(out_dir, f'samples_{it}.pth'))
 
                 xs.append(x0)
 
