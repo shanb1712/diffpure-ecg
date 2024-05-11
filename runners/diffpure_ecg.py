@@ -89,6 +89,6 @@ class DeScoDECG(torch.nn.Module):
                             fs=self.config.data.fs, xlim_range=[4, 7])
                 torch.save(x0[:r_batch_size], os.path.join(out_dir, f'denoised_sample.pth'))
 
-                xs.append(x0)
+            xs.append(x0)
 
             return torch.cat(xs, dim=0)
