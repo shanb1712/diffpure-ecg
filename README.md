@@ -1,4 +1,4 @@
-# Diffusion model for adversarial attacks on ECG
+# Diffusion model for adversarial attacks for ECG
 
 As part of a private project, I created an adversarial model on timer series (ECG) and evaluated it against bpda+eot attack. This is an initial attemp to create and run adversarial attacks on ECG defense model and can be further extended to other attacks.
 
