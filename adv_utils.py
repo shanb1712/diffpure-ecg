@@ -105,15 +105,18 @@ def update_state_dict(state_dict, idx_start=9):
 
 
 # ------------------------------------------------------------------------
-def run_inference(model, x_orig, bs=64, device=torch.device('cuda')):
+def run_inference(model, x_orig, bs=64, mode='classify', device=torch.device('cuda')):
     n_batches = x_orig.shape[0] // bs
     y_pred_all = []
     outputs_all = []
     for counter in range(n_batches+1):
-        x = x_orig[counter * bs:min((counter + 1) * bs, x_orig.shape[0])].clone().to(device)
-        y_pred, outputs = model(x, mode='classify')
-        y_pred_all.append(y_pred)
-        outputs_all.append(outputs)
+        if counter * bs >= x_orig.shape[0]:
+            continue
+        else:
+            x = x_orig[counter * bs:min((counter + 1) * bs, x_orig.shape[0])].clone().to(device)
+            y_pred, outputs = model(x, mode=mode)
+            y_pred_all.append(y_pred)
+            outputs_all.append(outputs)
     return torch.cat(y_pred_all, dim=0), torch.cat(outputs_all, dim=0)
 
 
@@ -226,3 +229,4 @@ def save_signal(tensor, fp, format=None, fs=1, xlim_range=None) -> None:
     fig.text(0.5, 0.04, 'Time [sec]', ha='center')
     fig.text(0.04, 0.5, 'Amplitude [mv]', va='center', rotation='vertical')
     fig.savefig(fp, format=format)
+    plt.close()

@@ -67,13 +67,18 @@ class DeScoDECG(torch.nn.Module):
                 #     save_signal(x[:r_batch_size], os.path.join(out_dir, f'init_{it}.png'), fs=self.config.data.fs)
                 #     save_signal(x[:r_batch_size], os.path.join(out_dir, f'init_{it}_zoom_in.png'),
                 #                 fs=self.config.data.fs, xlim_range=[4, 7])
-            if self.args.sample_step > 1:
-                x = 0
-                for i in range(self.args.sample_step):
-                    x += self.model.denoising(x0)
-                x /= self.args.sample_step
-            else:
-                x = self.model.denoising(x0)  # B,1,L
+
+            x = 0
+            for i in range(self.args.sample_step):
+                x += self.model.denoising(x0)
+                if bs_id < 2:
+                    x_temp = x / (i+1)
+                    save_signal(x_temp[:r_batch_size], os.path.join(out_dir, f'denoised_sample_shot_{i}.png'),
+                                fs=self.config.data.fs)
+                    save_signal(x_temp[:r_batch_size], os.path.join(out_dir, f'denoised_sample_shot_{i}_zoom_in.png'),
+                                fs=self.config.data.fs, xlim_range=[4, 7])
+
+            x /= self.args.sample_step
             x = x - torch.Tensor.mean(x, axis=2)[:, None]
 
             x0 = x
@@ -82,8 +87,8 @@ class DeScoDECG(torch.nn.Module):
                 save_signal(x0[:r_batch_size], os.path.join(out_dir, f'denoised_sample.png'), fs=self.config.data.fs)
                 save_signal(x0[:r_batch_size], os.path.join(out_dir, f'denoised_sample_zoom_in.png'),
                             fs=self.config.data.fs, xlim_range=[4, 7])
-                torch.save(x0[:r_batch_size], os.path.join(out_dir, f'samples_{it}.pth'))
+                torch.save(x0[:r_batch_size], os.path.join(out_dir, f'denoised_sample.pth'))
 
-                xs.append(x0)
+            xs.append(x0)
 
             return torch.cat(xs, dim=0)

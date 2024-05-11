@@ -8,7 +8,7 @@
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
-
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "garbage_collection_threshold:0.8,max_split_size_mb:64"
 import argparse
 import logging
 import yaml
@@ -149,19 +149,21 @@ def eval_bpda(args, config, model, x_val, y_val, adv_batch_size, log_dir):
     start_time = time.time()
     model_.reset_counter()
     model_.set_tag('no_adv')
-    y_pred, outputs = run_inference(model_, x_val, bs=adv_batch_size, device=torch.device('cuda'))
+    y_pred, outputs = run_inference(model, x_val, bs=x_val.shape[0],
+                                    mode='purify_and_classify', device=torch.device('cuda'))
     acc['initial_sde_adv'] = report_performance(y_val, y_pred, outputs,
                                         output_path=args.log_dir, tag='initial_sde_adv', print_precision=True)
     print('Time elapsed: {:.2f}s'.format(time.time() - start_time))
 
-    adversary_sde = BPDA_EOT_Attack(model_, adv_eps=args.adv_eps, eot_defense_reps=args.eot_defense_reps,
+    adversary_sde = BPDA_EOT_Attack(model, adv_eps=args.adv_eps, eot_defense_reps=args.eot_defense_reps,
                                     eot_attack_reps=args.eot_attack_reps)
 
     start_time = time.time()
     model_.reset_counter()
-    model_.set_tag()
+    model_.set_tag('adv')
     class_batch, ims_adv_batch = adversary_sde.attack_all(x_val, y_val, batch_size=adv_batch_size)
-    y_pred, outputs = adversary_sde.get_logit(ims_adv_batch.to(config.device), mode='purify_and_classify')
+    y_pred, outputs = run_inference(model, ims_adv_batch.to(config.device), bs=ims_adv_batch.shape[0],
+                                    mode='purify_and_classify', device=torch.device('cuda'))
     acc['sde_adv'] = report_performance(y_val, y_pred, outputs,
                                            output_path=args.log_dir, tag='sde_adv', print_precision=True)
     print('init acc: {:.2%}, robust acc: {:.2%}, time elapsed: {:.2f}s'.format(acc['initial_sde_adv'], acc['sde_adv'],
